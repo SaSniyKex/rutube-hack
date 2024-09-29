@@ -34,7 +34,7 @@ class AudioProcesser():
             base_url="https://api.vsegpt.ru/v1",
         )
         print('Openai connected')
-    def generate_tags(self, chunk_description, video_description):
+    def generate_tags(self, chunk_description, video_description, llm):
 
         system_prompt = f"Сгенерируй список тегов по описанию видео, которое отправит пользователь. Выведи только самые подходящие, обобщенные теги, сильно не конкретизируй, не додумывай, желательно 1-3 тега. В случае если тебе не нравится текст по любым причинам, ответь пустой строкой. Теги должны быть разделены запятой. Вот название и описание видео, чтобы ты знал контекст: {video_description}"
         prompt = chunk_description
@@ -42,20 +42,14 @@ class AudioProcesser():
         messages.append({"role": "user", "content": prompt})
 
         try:
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=messages,
-                n=1,
-                stop=None,
-            )
-            tags = response.choices[0].message.content.strip()
+            tags = llm.ask_a_question(prompt)
             if not tags:
                 return []
             return [tag.strip() for tag in tags.split(',') if tag.strip()]
         except:
             print(f"Модерация отклонила запрос для чанка: {video_description}")
             return []
-    def process_video(self, file, video_description):
+    def process_video(self, file, video_description, llm):
         file_tags = set()
         
         # Транскрипция видео
@@ -78,7 +72,7 @@ class AudioProcesser():
             if sim > similarity_threshold:
                 chunk = chunked_text[i]
                 
-                tags = self.generate_tags(chunk, video_description)
+                tags = self.generate_tags(chunk, video_description, llm)
                 
                 # Если теги есть, добавляем их в множество
                 if tags:

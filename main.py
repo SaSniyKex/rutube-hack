@@ -8,10 +8,12 @@ from tempfile import NamedTemporaryFile, TemporaryDirectory
 from models.audio_pipeline import AudioProcesser
 from models.video_pipeline import Caption
 import json
+from llm import LLM
 
 app = FastAPI()
 audio_processer = AudioProcesser()
 video_processer = Caption()
+llm = LLM()
 
 @app.post("/get_tags")
 def get_tags(video_description: str, file: UploadFile = File(...)):
@@ -20,11 +22,11 @@ def get_tags(video_description: str, file: UploadFile = File(...)):
         with open(temp_file_path, "wb") as temp_file:
             temp_file.write(file.file.read())
             temp_file.flush ()
-        tags= audio_processer.process_video(temp_file_path, video_description)
+        tags= audio_processer.process_video(temp_file_path, video_description, llm)
         video_caption = video_processer.shot_transit(temp_file_path)
         data = json.loads(video_caption)
         video_caption =" ".join(item['caption'] for item in data)
-        video_tags = audio_processer.generate_tags(video_caption, video_description)
+        video_tags = audio_processer.generate_tags(video_caption, video_description, llm)
         tags.update(video_tags)
         print(tags)
     try:
